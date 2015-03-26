@@ -345,7 +345,7 @@ def log_frontend_event(request):
   _LOG_FRONTEND_LOGGER.log(level, msg)
   return HttpResponse("")
 
-def commonheader(title, section, user, padding="90px"):
+def commonheader(title, section, user, padding="90px", skip_navigation=False):
   """
   Returns the rendered common header
   """
@@ -372,7 +372,8 @@ def commonheader(title, section, user, padding="90px"):
     'section': section,
     'padding': padding,
     'user': user,
-    'is_demo': desktop.conf.DEMO_ENABLED.get()
+    'is_demo': desktop.conf.DEMO_ENABLED.get(),
+    'skip_navigation': skip_navigation
   })
 
 def commonshare():
