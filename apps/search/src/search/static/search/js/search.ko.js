@@ -668,7 +668,7 @@ var Collection = function (vm, collection) {
     return _fields;
   });
   self.template.availableWidgetFields = ko.computed(function() {
-    if (self.template.fieldsModalType() == 'histogram-widget') {
+    if (self.template.fieldsModalType() == 'histogram-widget' || self.template.fieldsModalType() == 'calendar-widget') {
       return vm.availableDateFields();
     }
     else if (self.template.fieldsModalType() == 'line-widget') {
@@ -1049,7 +1049,6 @@ var SearchViewModel = function (collection_json, query_json, initial_json) {
     });
   }
 
-  self.draggableHit = ko.observable(bareWidgetBuilder("Hit Count", "hit-widget"));
   self.draggableFacet = ko.observable(bareWidgetBuilder("Facet", "facet-widget"));
   self.draggableResultset = ko.observable(bareWidgetBuilder("Grid Results", "resultset-widget"));
   self.draggableHtmlResultset = ko.observable(bareWidgetBuilder("HTML Results", "html-resultset-widget"));
@@ -1064,6 +1063,7 @@ var SearchViewModel = function (collection_json, query_json, initial_json) {
   self.draggableHeatmap = ko.observable(bareWidgetBuilder("Heatmap", "heatmap-widget"));
   self.draggableCounter = ko.observable(bareWidgetBuilder("Counter", "hit-widget"));
   self.draggableBucket = ko.observable(bareWidgetBuilder("Histogram", "bucket-widget"));
+  self.draggableCalendar = ko.observable(bareWidgetBuilder("Calendar", "calendar-widget"));
 
   self.availableDateFields = ko.computed(function() {
     return $.grep(self.collection.availableFacetFields(), function(field) { return DATE_TYPES.indexOf(field.type()) != -1; });

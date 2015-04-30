@@ -104,6 +104,16 @@ ${ commonheader(_('Search'), "search", user, "80px") | n,unicode }
         <!--[if !IE]> --><i class="fa fa-spinner fa-spin" data-bind="visible: isRetrievingResults()"></i><!-- <![endif]-->
         <!--[if IE]><img src="${ static('desktop/art/spinner-inverted.gif') }" data-bind="visible: isRetrievingResults()"/><![endif]-->
       </button>
+  <select class="input-small"  style="margin-left:10px">
+    <option value="all">All</option>
+    <option value="volvo">5 Minutes</option>
+    <option value="volvo">15 Minutes</option>
+    <option value="volvo">1 Hour</option>
+    <option value="volvo">6 Month</option>
+  </select>      
+      <button id="search-btn" class="btn btn-inverse" data-bind="visible: $root.isEditing">
+        <i class="fa fa-calendar"></i>
+      </button>
     </div>
   </form>
 </div>
@@ -252,6 +262,17 @@ ${ commonheader(_('Search'), "search", user, "80px") | n,unicode }
          title="${_('Gradient Map')}" rel="tooltip" data-placement="top">
          <a data-bind="style: { cursor: $root.availableDraggableMap() ? 'move' : 'default' }">
                        <i class="hcha hcha-map-chart"></i>
+         </a>
+   </div>
+   
+   <div class="toolbar-label">FILTER</div>   
+   <div data-bind="css: { 'draggable-widget': true, 'disabled': ! availableDraggableHistogram() },
+                    draggable: {data: draggableCalendar(), isEnabled: true,
+                    options: {'start': function(event, ui){lastWindowScrollPosition = $(window).scrollTop();$('.card-body').slideUp('fast');},
+                              'stop': function(event, ui){$('.card-body').slideDown('fast', function(){$(window).scrollTop(lastWindowScrollPosition)});}}}"
+         title="${_('Calendar')}" rel="tooltip" data-placement="top">
+         <a data-bind="style: { cursor: $root.availableDraggableChart() ? 'move' : 'default' }">
+                       <i class="fa fa-calendar"></i>
          </a>
    </div>
       </%def>
@@ -495,6 +516,20 @@ ${ dashboard.layout_skeleton() }
   </div>
   <!-- /ko -->
 </script>
+
+
+<script type="text/html" id="calendar-widget">
+  <a>Rolling</a> | <a>Fixed</a> Window
+  </br>
+  <select>
+    <option value="volvo">5 Minutes</option>
+    <option value="volvo">15 Minutes</option>
+    <option value="volvo">1 Hour</option>
+    <option value="volvo">6 Month</option>
+  </select>
+</script>
+
+
 
 <script type="text/html" id="resultset-widget">
   <!-- ko if: $root.collection.template.isGridLayout() -->
