@@ -1996,3 +1996,12 @@ pre {
   border-left: 5px solid #DDD;
   border-radius: 0;
 }
+
+.leaflet-search-command {
+  padding: 4px;
+  background-color: #FFF;
+}
+
+.leaflet-search-command input, .leaflet-search-command label {
+  margin-bottom: 0;
+}
