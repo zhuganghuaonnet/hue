@@ -166,7 +166,7 @@ ${ commonheader(None, "sqoop", user) | n,unicode }
               </a>
             </li>
             <li class="nav-header" data-bind="visible: $root.job().persisted && $.inArray(submission().status(), ['BOOTING', 'RUNNING', 'UNKNOWN', 'SUCCEEDED', 'FAILURE_ON_SUBMIT', 'FAILED']) > -1">${_('Last status')}</li>
-            <li data-bind="visible: $root.job().persisted">
+            <li data-bind="visible: $root.job().persisted" class="white">
               <span class="label label-success" data-bind="visible: submission().status() == 'SUCCEEDED'">
                 <span data-bind="text:  submission().createdFormatted()"></span>
               </span>

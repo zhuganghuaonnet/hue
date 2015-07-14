@@ -266,6 +266,8 @@ ${ header.menubar() }
       margin:0;
       left:0;
       right:0;
+      background-color: #f5f5f5;
+      border-top: 1px solid #e3e3e3;
     }
   }
 
