@@ -18,9 +18,12 @@
 
 package com.cloudera.hue.livy.repl.sparkr
 
+import java.io.File
+import java.nio.file.Files
 import java.util.concurrent.locks.ReentrantLock
 
 import com.cloudera.hue.livy.repl.process.ProcessInterpreter
+import org.apache.commons.codec.binary.Base64
 import org.json4s.jackson.JsonMethods._
 import org.json4s.jackson.Serialization.write
 import org.json4s.{JValue, _}
@@ -48,33 +51,100 @@ private class SparkRInterpreter(process: Process)
   }
 
   override protected def sendExecuteRequest(commands: String): Option[JValue] = synchronized {
-    commands.split("\n").map { case code =>
-      stdin.println(code)
-      stdin.println(LIVY_END_MARKER)
-      stdin.flush()
-
+    commands.split("\n").map { case command =>
       executionCount += 1
 
-      // Skip the line we just entered in.
-      if (!code.isEmpty) {
-        readTo(code)
-      }
+      val (exited, response) = sendSingleExecuteRequest(command)
 
-      readTo(EXPECTED_OUTPUT)
+      (
+        exited,
+        response match {
+          case Right(content) =>
+            Right(Map(
+              "status" -> "ok",
+              "execution_count" -> (executionCount - 1),
+              "data" -> content
+            ))
+          case Left(error) =>
+            Left(Map(
+              "status" -> "error",
+              "ename" -> "Error",
+              "evalue" -> error,
+              "data" -> Map(
+                "text/plain" -> takeErrorLines()
+              )
+            ))
+        }
+      )
+    }.takeWhile { case (exited, response: Either[Map[String, Any], Map[String, Any]]) =>
+      !exited || response.isRight
     }.last match {
-      case (true, output) =>
-        val data = (output + takeErrorLines())
-
-        Some(parse(write(Map(
-          "status" -> "ok",
-          "execution_count" -> (executionCount - 1),
-          "data" -> Map(
-            "text/plain" -> data
-          )
-        ))))
-      case (false, output) =>
+      case (true, Right(response)) =>
+        Some(parse(write(response)))
+      case (true, Left(response)) =>
+        Some(parse(write(response)))
+      case (false, _) =>
         None
     }
+  }
+
+  private val plotRegex = (
+    "(?:" +
+      "(stripchart)|" +
+      "(hist)|" +
+      "(boxplot)|" +
+      "(plot)|" +
+      "(qqnorm)|" +
+      "(qqline)" +
+    ")" +
+    "([^;)]*)"
+  ).r
+
+  private def sendSingleExecuteRequest(command: String) = { //: (Boolean, Either[Map[String, Any], String]) = {
+    if (command.startsWith("%")) {
+      command.substring(1) match {
+        case plotRegex(args) =>
+          val tempFile = Files.createTempFile("", "png")
+          try {
+            val tempFileString = tempFile.toAbsolutePath.toString
+
+            val (exited, _) = sendRequest(f"""png("$tempFileString"); stripchart($args); dev.off()""")
+
+            // Encode the image as a base64 image.
+            (
+              exited,
+              Right(Map(
+                "image/png" -> Base64.encodeBase64String(Files.readAllBytes(tempFile))
+              ))
+            )
+          } finally {
+            Files.delete(tempFile)
+          }
+        case _ =>
+          (false, Left(f"unknown magic command `$command`"))
+      }
+    } else {
+      val (exited, data) = sendRequest(command)
+      (
+        exited,
+        Right(Map(
+          "text/plain" -> (data + takeErrorLines())
+        ))
+      )
+    }
+  }
+
+  private def sendRequest(code: String): (Boolean, String) = {
+    stdin.println(code)
+    stdin.println(LIVY_END_MARKER)
+    stdin.flush()
+
+    // Skip the line we just entered in.
+    if (!code.isEmpty) {
+      readTo(code)
+    }
+
+    readTo(EXPECTED_OUTPUT)
   }
 
   override protected def sendShutdownRequest() = {
