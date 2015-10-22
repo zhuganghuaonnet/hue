@@ -36,12 +36,14 @@ from desktop.lib.json_utils import JSONEncoderForHTML
 from desktop.models import Document2
 
 from hadoop.fs.hadoopfs import Hdfs
+from hadoop.fs.exceptions import WebHdfsException
+
 from liboozie.submission2 import Submission
 from liboozie.submission2 import create_directories
 
 from oozie.conf import REMOTE_SAMPLE_DIR
 from oozie.utils import utc_datetime_format, UTC_TIME_FORMAT, convert_to_server_timezone
-from hadoop.fs.exceptions import WebHdfsException
+from oozie.importlib.workflows import generate_v2_graph_nodes, MalformedWfDefException, InvalidTagWithNamespaceException
 
 
 LOG = logging.getLogger(__name__)
@@ -298,6 +300,260 @@ class Workflow(Job):
   @classmethod
   def get_application_path_key(cls):
     return 'oozie.wf.application.path'
+
+  @classmethod
+  def gen_workflow_data_from_xml(cls, user, oozie_workflow):
+    node_list = []
+    try:
+      node_list = generate_v2_graph_nodes(oozie_workflow.definition)
+    except MalformedWfDefException, e:
+      LOG.exception(_("Could not find any nodes in Workflow definition. Maybe it's malformed?"))
+    except InvalidTagWithNamespaceException, e:
+      LOG.exception(_("Tag with namespace %(namespace)s is not valid. Please use one of the following namespaces: %(namespaces)s") % {
+      'namespace': e.namespace,
+      'namespaces': e.namespaces
+    })
+
+    adj_list = _create_graph_adjaceny_list(node_list)
+    node_hierarchy = ['start']
+    _get_hierarchy_from_adj_list(adj_list, adj_list['start']['ok_to'], node_hierarchy)
+
+    uuids = {}
+    id = 1
+    for node in adj_list.keys():
+      adj_list[node]['id'] = id
+
+      if adj_list[node]['node_type'] == 'kill':
+        adj_list[node]['uuid'] = '17c9c895-5a16-7443-bb81-f34b30b21548'
+      elif adj_list[node]['node_type'] == 'start':
+        adj_list[node]['uuid'] = '3f107997-04cc-8733-60a9-a4bb62cebffc'
+      elif adj_list[node]['node_type'] == 'end':
+        adj_list[node]['uuid'] = '33430f0f-ebfa-c3ec-f237-3e77efa03d0a'
+      else:
+        adj_list[node]['uuid'] = str(uuid.uuid4())
+
+      uuids[id] = adj_list[node]['uuid']
+      id += 1
+
+    wf_rows = _create_workflow_layout(node_hierarchy, adj_list)
+    data = {'layout': [{}], 'workflow': {}}
+    if wf_rows:
+      data['layout'][0]['rows'] = wf_rows
+
+    wf_nodes = []
+    _dig_nodes(node_hierarchy, adj_list, user, wf_nodes)
+    data['workflow']['nodes'] = wf_nodes
+    data['workflow']['properties'] = json.loads("""{
+      "job_xml": "",
+      "description": "",
+      "wf1_id": null,
+      "sla_enabled": false,
+      "deployment_dir": "/user/hue/oozie/workspaces/hue-oozie-1452553957.19",
+      "schema_version": "uri:oozie:workflow:0.5",
+      "sla": [
+        {
+          "key": "enabled",
+          "value": false
+        },
+        {
+          "key": "nominal-time",
+          "value": "${nominal_time}"
+        },
+        {
+          "key": "should-start",
+          "value": ""
+        },
+        {
+          "key": "should-end",
+          "value": "${30 * MINUTES}"
+        },
+        {
+          "key": "max-duration",
+          "value": ""
+        },
+        {
+          "key": "alert-events",
+          "value": ""
+        },
+        {
+          "key": "alert-contact",
+          "value": ""
+        },
+        {
+          "key": "notification-msg",
+          "value": ""
+        },
+        {
+          "key": "upstream-apps",
+          "value": ""
+        }
+      ],
+      "show_arrows": true,
+      "parameters": [
+        {
+          "name": "oozie.use.system.libpath",
+          "value": true
+        }
+      ],
+      "properties": []
+    }""")
+
+    return data
+
+def _dig_nodes(nodes, adj_list, user, wf_nodes):
+  for node in nodes:
+    if type(node) != list:
+      node = adj_list[node]
+      properties = {}
+      if '%s-widget' % node['node_type'] in NODES:
+        properties = dict(NODES['%s-widget' % node['node_type']].get_fields())
+
+      if node['node_type'] == 'pig':
+        properties['script_path'] = node.get('script_path')
+      elif node['node_type'] == 'hive':
+        properties['script_path'] = node.get('script_path')
+      elif node['node_type'] == 'java':
+        properties['jar_path'] = node.get('jar_path')
+      elif node['node_type'] == 'sqoop':
+        properties['command'] = node.get('script_path')
+      elif node['node_type'] == 'mapreduce':
+        properties['jar_path'] = node.get('jar_path')
+      elif node['node_type'] == 'shell':
+        properties['shell_command'] = node.get('shell').get('command')
+      elif node['node_type'] == 'ssh':
+        properties['user'] = '%s@%s' % (node.get(user), node.get('host'))
+        properties['ssh_command'] = node.get('command')
+      elif node['node_type'] == 'fs':
+        properties['deletes'] = [{'value': f['name']} for f in json.loads(node.get('deletes'))]
+        properties['mkdirs'] = [{'value': f['name']} for f in json.loads(node.get('mkdirs'))]
+        properties['moves'] = json.loads(node.get('moves'))
+        chmods = json.loads(node.get('chmods'))
+        for c in chmods:
+          c['value'] = c['path']
+          c['dir_files'] = False
+        properties['chmods'] = chmods
+        properties['touchzs'] = [{'value': f['name']} for f in json.loads(node.get('touchzs'))]
+      elif node['node_type'] == 'email':
+        properties['to'] = node.get('to')
+        properties['cc'] = node.get('cc')
+        properties['subject'] = node.get('subject')
+        properties['body'] = node.get('body')
+        properties['description'] = node.get('description')
+      elif node['node_type'] == 'streaming':
+        properties['mapper'] = node.get('mapper')
+        properties['reducer'] = node.get('reducer')
+      elif node['node_type'] == 'distcp':
+        properties['distcp_parameters'] = json.loads(node.get('params'))
+        properties['java_opts'] = node.get('job_xml')
+
+      children = []
+      if node['node_type'] == 'fork':
+        children.append({'to': adj_list[node['path1']]['uuid'], 'condition': '${ 1 gt 0 }'})
+        children.append({'to': adj_list[node['path2']]['uuid'], 'condition': '${ 1 gt 0 }'})
+      else:
+        if node.get('ok_to'):
+          children.append({'to': adj_list[node['ok_to']]['uuid']})
+        if node.get('error_to'):
+          children.append({'error': adj_list[node['error_to']]['uuid']})
+
+      wf_nodes.append({
+          "id": node['uuid'],
+          "name": '%s-%s' % (node['node_type'].split('-')[0], node['uuid'][:4]),
+          "type": "%s-widget" % node['node_type'],
+          "properties": properties,
+          "children": children
+      })
+    else:
+      _dig_nodes(node, adj_list, user, wf_nodes)
+
+
+def _create_workflow_layout(nodes, adj_list, size=12):
+   wf_rows = []
+
+   for node in nodes:
+     if type(node) == list and len(node) == 1:
+       node = node[0]
+     if type(node) != list:
+       wf_rows.append({"widgets":[{"size":size, "name": adj_list[node]['name'] or adj_list[node]['node_type'], "id":  adj_list[node]['uuid'], "widgetType": "%s-widget" % adj_list[node]['node_type'], "properties":{}, "offset":0, "isLoading":False, "klass":"card card-widget span%s" % size, "columns":[]}]})
+     else:
+       if adj_list[node[0]]['node_type'] == 'fork':
+         wf_rows.append({"widgets":[{"size":size, "name": 'Fork', "id":  adj_list[node[0]]['uuid'], "widgetType": "%s-widget" % adj_list[node[0]]['node_type'], "properties":{}, "offset":0, "isLoading":False, "klass":"card card-widget span%s" % size, "columns":[]}]})
+
+         wf_rows.append({
+           "id": str(uuid.uuid4()),
+           "widgets":[
+
+           ],
+           "columns":[
+              {
+                 "id": str(uuid.uuid4()),
+                 "size": (size / len(node[1])),
+                 "rows":
+                    [{
+                       "id": str(uuid.uuid4()),
+                       "widgets": c['widgets'],
+                       "columns":[]
+                     }
+                   for c in col] if type(col) == list else [{
+                       "id": str(uuid.uuid4()),
+                       "widgets": col['widgets'],
+                       "columns":[]
+                     }
+                  ]
+                 ,
+                 "klass":"card card-home card-column span%s" % (size / len(node[1]))
+              }
+              for col in _create_workflow_layout(node[1], adj_list, size)
+           ]
+         })
+
+         wf_rows.append({"widgets":[{"size":size, "name": 'Join', "id":  adj_list[node[2]]['uuid'], "widgetType": "%s-widget" % adj_list[node[2]]['node_type'], "properties":{}, "offset":0, "isLoading":False, "klass":"card card-widget span%s" % size, "columns":[]}]})
+       else:
+         wf_rows.append(_create_workflow_layout(node, adj_list, size))
+
+   return wf_rows
+
+
+def _get_hierarchy_from_adj_list(adj_list, curr_node, node_hierarchy):
+
+  if adj_list[curr_node]['node_type'] == 'join':
+    return curr_node
+
+  elif adj_list[curr_node]['node_type'] == 'end':
+    node_hierarchy.append(['Kill'])
+    node_hierarchy.append(['End'])
+    return node_hierarchy
+
+  elif adj_list[curr_node]['node_type'] == 'fork':
+    fork_nodes = []
+    fork_nodes.append(curr_node)
+
+    left_children = []
+    left_join_node = _get_hierarchy_from_adj_list(adj_list, adj_list[curr_node]['path1'], left_children)
+
+    right_children = []
+    right_join_node = _get_hierarchy_from_adj_list(adj_list, adj_list[curr_node]['path2'], right_children)
+
+    fork_nodes.append([left_children, right_children])
+    fork_nodes.append(left_join_node)
+
+    node_hierarchy.append(fork_nodes)
+    return _get_hierarchy_from_adj_list(adj_list, adj_list[left_join_node]['ok_to'], node_hierarchy)
+
+  else:
+    node_hierarchy.append(curr_node)
+    return _get_hierarchy_from_adj_list(adj_list, adj_list[curr_node]['ok_to'], node_hierarchy)
+
+
+def _create_graph_adjaceny_list(nodes):
+  start_node = [node for node in nodes if node.get('node_type') == 'start'][0]
+  adj_list = {'start': start_node}
+
+  for node in nodes:
+    if node and node.get('node_type') != 'start':
+      adj_list[node['name']] = node
+
+  return adj_list
 
 
 class Node():
