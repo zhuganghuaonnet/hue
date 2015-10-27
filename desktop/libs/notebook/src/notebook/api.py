@@ -330,7 +330,7 @@ def github_noauth_fetch(request):
   if url is None:
     return JsonResponse({'status': -1})
   else:
-    r = requests.get(url.replace("github.com", "raw.githubusercontent.com").replace("blob/", ""))
+    r = requests.get(url.replace("github.com", "raw.githubusercontent.com").replace("blob/", ""), verify=False)
     return HttpResponse(r.content, content_type="application/json")
 
 
