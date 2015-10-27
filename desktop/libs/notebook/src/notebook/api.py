@@ -17,6 +17,7 @@
 
 import json
 import logging
+import requests
 
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.utils.translation import ugettext as _
@@ -30,7 +31,6 @@ from notebook.connectors.base import get_api, Notebook, QueryExpired
 from notebook.decorators import api_error_handler, check_document_modify_permission
 from notebook.github import GithubClient, GithubClientException
 from notebook.models import escape_rows
-
 
 LOG = logging.getLogger(__name__)
 
@@ -322,6 +322,18 @@ def github_fetch(request):
     return HttpResponseBadRequest(_('url param is required'))
 
   return JsonResponse(response)
+
+@require_GET
+@api_error_handler
+def github_noauth_fetch(request):
+  url = request.GET.get('url', None)
+  if url is None:
+    return JsonResponse({'status': -1})
+  else:
+    r = requests.get(url.replace("github.com", "raw.githubusercontent.com").replace("blob/", ""))
+    return HttpResponse(r.content, content_type="application/json")
+
+
 
 
 @api_error_handler

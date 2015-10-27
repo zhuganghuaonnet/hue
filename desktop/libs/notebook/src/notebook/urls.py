@@ -62,6 +62,7 @@ urlpatterns += patterns('notebook.api',
 
 # Github
 urlpatterns += patterns('notebook.api',
+  url(r'^api/github_noauth/fetch$', 'github_noauth_fetch', name='github_noauth_fetch'),
   url(r'^api/github/fetch$', 'github_fetch', name='github_fetch'),
   url(r'^api/github/authorize', 'github_authorize', name='github_authorize'),
   url(r'^api/github/callback', 'github_callback', name='github_callback'),

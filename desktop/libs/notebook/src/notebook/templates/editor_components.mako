@@ -995,30 +995,30 @@ ${ require.config() }
     if ($("#importGithubUrl").val().trim() != "") {
       $(".fa-github").addClass("fa-spinner fa-spin");
       $("#importGithubBtn").attr("disabled", "disabled");
-      $.getJSON("/notebook/api/github/authorize?currentURL=" + location.pathname + (location.search != "" ? location.search : "?github=true") + "&fetchURL=" + $("#importGithubUrl").val(), function (data) {
-        if (data.status == 0) {
+      //$.getJSON("/notebook/api/github/authorize?currentURL=" + location.pathname + (location.search != "" ? location.search : "?github=true") + "&fetchURL=" + $("#importGithubUrl").val(), function (data) {
+      //  if (data.status == 0) {
           $(".fa-github").removeClass("fa-spinner fa-spin");
           $("#importGithubBtn").removeAttr("disabled");
           $("#importGithubModal").modal("hide");
           importGithub();
-        }
-        else {
-          location.href = data.auth_url;
-        }
-      });
+      //  }
+      //  else {
+      //    location.href = data.auth_url;
+      //  }
+      //});
     }
   }
 
   function importGithub() {
     $(".hoverText").html("<i class='fa fa-spinner fa-spin'></i>");
     showHoverMsg();
-    $.get("api/github/fetch?url=" + $("#importGithubUrl").val().trim(), function(data){
-      if (data && data.content){
-        if ($.isArray(data.content)) { // it's a Hue Notebook
-          window.importExternalNotebook(JSON.parse(data.content[0].fields.data));
+    $.get("api/github_noauth/fetch?url=" + $("#importGithubUrl").val().trim(), function(data){
+      if (data){
+        if ($.isArray(data)) { // it's a Hue Notebook
+          window.importExternalNotebook(JSON.parse(data.fields.data));
         }
         else { // iPython / Zeppelin
-          window.parseExternalJSON(data.content);
+          window.parseExternalJSON(data);
         }
         $("#importGithubUrl").val("");
       }
