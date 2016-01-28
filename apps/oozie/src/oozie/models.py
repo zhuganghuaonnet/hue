@@ -262,7 +262,7 @@ class WorkflowManager(models.Manager):
   }
 
   def new_workflow(self, owner):
-    workflow = Workflow(owner=owner, schema_version=WorkflowManager.SCHEMA_VERSION['0.4'])
+    workflow = Workflow(owner=owner, schema_version=WorkflowManager.SCHEMA_VERSION['0.5'])
 
     kill = Kill(name='kill', workflow=workflow, node_type=Kill.node_type)
     end = End(name='end', workflow=workflow, node_type=End.node_type)

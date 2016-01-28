@@ -112,7 +112,7 @@ class OozieApi(object):
           archives.append({"dummy": "", "name": resource['value']})
 
     action = Pig.objects.create(
-        name='pig',
+        name='pig-5760',
         script_path=script_path,
         workflow=workflow,
         node_type='pig',
