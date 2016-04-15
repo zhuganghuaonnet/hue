@@ -41,7 +41,8 @@ DEBUG = DJANGO_DEBUG_MODE.get()
         "knockout-sortable" : "desktop/ext/js/knockout-sortable.min",
         "ko.editable" : "desktop/js/ko.editable",
         "ko.switch-case" : "desktop/js/ko.switch-case",
-        "ko.hue-bindings" : "desktop/js/ko.hue-bindings"
+        "ko.hue-bindings" : "desktop/js/ko.hue-bindings",
+        "text" : "desktop/ext/js/text"
       },
       shim: {
         "knockout": { exports: "ko" },
