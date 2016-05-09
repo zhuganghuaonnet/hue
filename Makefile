@@ -278,13 +278,16 @@ ext-clean:
 # Misc (some used by automated test scripts)
 ###############################################
 
+js-test:
+	$(ROOT)/tools/jasmine/phantomjs.runner.sh $(ROOT)/desktop/core/src/desktop/templates/jasmineRunner.html
+
 java-test:
 	mvn -f desktop/libs/hadoop/java/pom.xml test $(MAVEN_OPTIONS)
 
-test: java-test
+test: java-test js-test
 	DESKTOP_DEBUG=1 $(ENV_PYTHON) $(BLD_DIR_BIN)/hue test fast --with-xunit
 
-test-slow: java-test
+test-slow: java-test js-test
 	DESKTOP_DEBUG=1 $(ENV_PYTHON) $(BLD_DIR_BIN)/hue test all --with-xunit --with-cover
 	$(BLD_DIR_BIN)/coverage xml
 
