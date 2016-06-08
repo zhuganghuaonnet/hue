@@ -422,7 +422,8 @@ LIMIT $limit"""))
 
       # other user cannot view document
       response = self.client_not_me.get(reverse('oozie:edit_workflow'), {'uuid': wf_doc.uuid})
-      assert_equal(response.status_code, 401)
+      assert_true('Document does not exist or you don&#39;t have the permission to access it.' in response.content,
+                   response.content)
 
       # Share write perm by user
       if USE_NEW_EDITOR.get():
@@ -432,7 +433,8 @@ LIMIT $limit"""))
 
       # other user can access document
       response = self.client_not_me.get(reverse('oozie:edit_workflow'), {'workflow': wf_doc.uuid})
-      assert_equal(response.status_code, 200)
+      assert_false('Document does not exist or you don&#39;t have the permission to access it.' in response.content,
+                   response.content)
     finally:
       wf_doc.delete()
 
