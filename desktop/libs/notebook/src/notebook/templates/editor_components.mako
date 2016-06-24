@@ -1096,7 +1096,19 @@ ${ hueIcons.symbols() }
   <div class="snippet-log-container margin-bottom-10" data-bind="visible: showLogs() && status() != 'ready' && status() != 'loading'" style="display: none;">
     <div data-bind="delayedOverflow, css: resultsKlass" style="margin-top: 5px; position: relative;">
       <ul data-bind="visible: jobs().length > 0, foreach: jobs" class="unstyled jobs-overlay">
-        <li><a data-bind="text: $.trim($data.name), attr: { href: $data.url }" target="_blank"></a></li>
+        <li data-bind="attr: {'id': $data.name.substr(4)}"><a data-bind="text: $.trim($data.name), attr: { href: $data.url }" target="_blank"></a>
+          <!-- ko if: percentMap() > -1 -->
+          <div class="progress-job progress progress-warning active pull-left" style="background-color: #FFF; width: 50%">
+            <div class="bar" data-bind="style: {'width': percentMap() '%'}"></div>
+          </div>
+          <!-- /ko -->
+          <!-- ko if: percentReduce() > -1 -->
+          <div class="progress-job progress progress-warning active pull-left" style="background-color: #FFF; width: 50%">
+              <div class="bar" data-bind="style: {'width': percentReduce() + '%'}"></div>
+            </div>
+          <!-- /ko -->
+          <div class="clearfix"></div>
+        </li>
       </ul>
       <pre data-bind="visible: result.logs().length == 0" class="logs logs-bigger">${ _('No logs available at this moment.') }</pre>
       <pre data-bind="visible: result.logs().length > 0, text: result.logs, logScroller: result.logs, logScrollerVisibilityEvent: showLogs" class="logs logs-bigger logs-populated"></pre>
@@ -1720,7 +1732,7 @@ ${ hueIcons.symbols() }
 <script type="text/html" id="snippet-execution-status">
   <div class="snippet-execution-status" data-bind="clickForAceFocus: ace">
     <div class="snippet-progress-container">
-      <div class="progress active" data-bind="css: {
+      <div class="progress-snippet progress active" data-bind="css: {
         'progress-starting': progress() == 0 && status() == 'running',
         'progress-warning': progress() > 0 && progress() < 100,
         'progress-success': progress() == 100,
@@ -3128,7 +3140,7 @@ ${ hueIcons.symbols() }
 
       $(document).on("executeStarted", function (e, snippet) {
         var _el = $("#snippet_" + snippet.id()).find(".resultTable");
-        $("#snippet_" + snippet.id()).find(".progress").animate({
+        $("#snippet_" + snippet.id()).find(".progress-snippet").animate({
           height: "3px"
         }, 100);
         if (_el.hasClass("dt")) {
@@ -3208,7 +3220,7 @@ ${ hueIcons.symbols() }
       $(document).on("progress", function (e, options) {
         if (options.data == 100) {
           window.setTimeout(function () {
-            $("#snippet_" + options.snippet.id()).find(".progress").animate({
+            $("#snippet_" + options.snippet.id()).find(".progress-snippet").animate({
               height: "0"
             }, 100, function () {
               options.snippet.progress(0);
@@ -3228,10 +3240,31 @@ ${ hueIcons.symbols() }
         }
       });
 
-      huePubSub.subscribe('submit.popup.return', function(data){
+      huePubSub.subscribe('submit.popup.return', function (data) {
         console.log('Job id', data.job_id);
         $.jHueNotify.info('${_('Coordinator submitted.')}');
         $('.submit-modal').modal('hide');
+      });
+
+      huePubSub.subscribe('jobbrowser.data', function (jobs) {
+        if (jobs.length > 0) {
+          jobs.forEach(function (job) {
+            if ($("#" + job.shortId).length > 0) {
+              var _job = ko.dataFor($("#" + job.shortId)[0]);
+              var percentMap = -1;
+              if (!isNaN(parseInt(job.mapPercentComplete))) {
+                percentMap = parseInt(job.mapPercentComplete);
+              }
+              _job.percentMap(percentMap);
+
+              var percentReduce = -1;
+              if (!isNaN(parseInt(job.reducesPercentComplete))) {
+                percentReduce = parseInt(job.reducesPercentComplete);
+              }
+              _job.percentReduce(percentReduce);
+            }
+          });
+        }
       });
 
       $(document).on("gridShown", function (e, snippet) {

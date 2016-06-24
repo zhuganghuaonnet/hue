@@ -1040,6 +1040,10 @@
             }
           }
           if (data.jobs.length > 0) {
+            data.jobs.forEach(function(job){
+              job.percentMap = ko.observable(-1);
+              job.percentReduce = ko.observable(-1);
+            });
             self.jobs(data.jobs);
           }
           if (self.status() == 'running') { // Maybe the query finished or failed in the meantime
