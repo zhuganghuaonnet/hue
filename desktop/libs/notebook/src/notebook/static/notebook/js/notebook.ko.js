@@ -872,7 +872,7 @@
       var _initialIndex = self.result.data().length;
       var _tempData = [];
       $.each(result.data, function (index, row) {
-        row.unshift(_initialIndex + index + 1);
+        // row.unshift(_initialIndex + index + 1);
         self.result.data.push(row);
         _tempData.push(row);
       });
@@ -882,7 +882,7 @@
       $(document).trigger("renderData", {data: _tempData, snippet: self, initial: _initialIndex == 0});
 
       if (! self.result.fetchedOnce()) {
-        result.meta.unshift({type: "INT_TYPE", name: "", comment: null});
+        // result.meta.unshift({type: "INT_TYPE", name: "", comment: null});
         self.result.meta(result.meta);
         self.result.type(result.type);
         self.result.fetchedOnce(true);

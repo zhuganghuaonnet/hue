@@ -60,6 +60,7 @@ if USE_NEW_EDITOR.get():
   <link href="${ static('desktop/ext/css/font-awesome.min.css') }" rel="stylesheet">
   <link href="${ static('desktop/css/hue3.css') }" rel="stylesheet">
   <link href="${ static('desktop/ext/css/fileuploader.css') }" rel="stylesheet">
+  <link href="${ static('desktop/ext/css/handsontable.full.min.css') }" rel="stylesheet">
 
   <style type="text/css">
     % if conf.CUSTOM.BANNER_TOP_HTML.get():
@@ -194,6 +195,7 @@ if USE_NEW_EDITOR.get():
   <script src="${ static('desktop/js/jquery.tableextender.js') }"></script>
   <script src="${ static('desktop/js/jquery.scrollup.js') }"></script>
   <script src="${ static('desktop/js/jquery.tour.js') }"></script>
+  <script src="${ static('desktop/ext/js/handsontable.full.min.js') }"></script>
   <script src="${ static('desktop/ext/js/jquery/plugins/jquery.cookie.js') }"></script>
   <script src="${ static('desktop/ext/js/jquery/plugins/jquery.total-storage.min.js') }"></script>
   <script src="${ static('desktop/ext/js/jquery/plugins/jquery.placeholder.min.js') }"></script>

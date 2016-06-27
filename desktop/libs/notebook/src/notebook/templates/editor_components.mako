@@ -1165,6 +1165,9 @@ ${ hueIcons.symbols() }
       </ul>
       <div class="tab-content" style="border: none">
         <div class="tab-pane" id="queryHistory" data-bind="css: {'active': currentQueryTab() == 'queryHistory'}">
+
+          <div id="example1"></div>
+
           <!-- ko if: $parent.loadingHistory -->
           <div style="padding: 20px">
             <i class="fa fa-spinner fa-spin muted"></i>
@@ -1619,15 +1622,18 @@ ${ hueIcons.symbols() }
           </div>
           <div data-bind="css: {'span10': isResultSettingsVisible, 'span12 nomargin': ! isResultSettingsVisible() }">
             <div data-bind="visible: showGrid, delayedOverflow, css: resultsKlass" style="display: none;">
-              <table class="table table-condensed table-striped resultTable">
-                <thead>
-                <tr data-bind="foreach: result.meta">
-                  <th data-bind="html: ($index() == 0 ? '&nbsp;' : $data.name), css: typeof cssClass != 'undefined' ? cssClass : 'sort-string', attr: {'width': ($index() == 0 ? '1%' : ''), title: $data.type }"></th>
-                </tr>
-                </thead>
-                <tbody>
-                </tbody>
-              </table>
+
+              <div class="handsontable-result"></div>
+
+##               <table class="table table-condensed table-striped resultTable">
+##                 <thead>
+##                 <tr data-bind="foreach: result.meta">
+##                   <th data-bind="html: ($index() == 0 ? '&nbsp;' : $data.name), css: typeof cssClass != 'undefined' ? cssClass : 'sort-string', attr: {'width': ($index() == 0 ? '1%' : ''), title: $data.type }"></th>
+##                 </tr>
+##                 </thead>
+##                 <tbody>
+##                 </tbody>
+##               </table>
               <div data-bind="visible: status() == 'expired' && result.data() && result.data().length > 99, css: resultsKlass" style="display:none;">
                 <pre class="margin-top-10"><i class="fa fa-check muted"></i> ${ _("Results have expired, rerun the query if needed.") }</pre>
               </div>
@@ -2110,6 +2116,33 @@ ${ hueIcons.symbols() }
   }
 
   ace.config.set("basePath", "/static/desktop/js/ace");
+
+  function createHandsonTable(el, snippet, vm) {
+    var hot = new Handsontable($(el)[0], {
+      data: snippet.result.data(),
+      height: 330,
+      rowHeaders: true,
+      colHeaders: snippet.result.meta().map(function (a) {
+        return a.name
+      }),
+      columns: snippet.result.meta().map(function (a) {
+        return {renderer: 'html', editor: false}
+      }),
+      readOnly: true,
+      autoWrapRow: true,
+      viewportColumnRenderingOffset: 50,
+      afterScrollVertically: function() {
+
+      },
+      wordWrap: true,
+      manualColumnResize: true,
+      stretchH: 'all',
+      columnSorting: true,
+      tableClassName: ['table', 'table-hover', 'table-striped']
+    });
+    $(el).data('handsontable', hot);
+    return hot;
+  }
 
   function createHueDatatable(el, snippet, vm) {
     var _dt = $(el).hueDataTable({
@@ -2707,6 +2740,30 @@ ${ hueIcons.symbols() }
 
     var redrawFixedHeaders = function (timeout) {
       var renderer = function() {
+        if (!viewModel.selectedNotebook()) {
+          return;
+        }
+        viewModel.selectedNotebook().snippets().forEach(function (snippet) {
+          var hot = $("#snippet_" + snippet.id()).find('.handsontable-result').data('handsontable');
+          if (hot) {
+            try {
+              hot.render();
+            }
+            catch (e) {
+            }
+          }
+        });
+      }
+      if (timeout){
+        window.setTimeout(renderer, timeout);
+      } else {
+        renderer();
+      }
+      $('.right-panel').jHueScrollUp();
+    }
+
+    var redrawFixedHeadersOld = function (timeout) {
+      var renderer = function() {
         if (! viewModel.selectedNotebook()) {
           return;
         }
@@ -3129,19 +3186,26 @@ ${ hueIcons.symbols() }
       });
 
       $(document).on("executeStarted", function (e, snippet) {
-        var _el = $("#snippet_" + snippet.id()).find(".resultTable");
-        $("#snippet_" + snippet.id()).find(".progress").animate({
-          height: "3px"
-        }, 100);
-        if (_el.hasClass("dt")) {
-          _el.removeClass("dt");
-          $("#eT" + snippet.id() + "jHueTableExtenderClonedContainer").remove();
-          $("#eT" + snippet.id() + "jHueTableExtenderClonedContainerColumn").remove();
-          $("#eT" + snippet.id() + "jHueTableExtenderClonedContainerCell").remove();
-          _el.dataTable().fnClearTable();
-          _el.dataTable().fnDestroy();
-          _el.find("thead tr").empty();
+        var hot = $("#snippet_" + snippet.id()).find('.handsontable-result').data('handsontable');
+        if (hot) {
+          try {
+            hot.destroy();
+          }
+          catch (e){}
         }
+##         var _el = $("#snippet_" + snippet.id()).find(".resultTable");
+##         $("#snippet_" + snippet.id()).find(".progress").animate({
+##           height: "3px"
+##         }, 100);
+##         if (_el.hasClass("dt")) {
+##           _el.removeClass("dt");
+##           $("#eT" + snippet.id() + "jHueTableExtenderClonedContainer").remove();
+##           $("#eT" + snippet.id() + "jHueTableExtenderClonedContainerColumn").remove();
+##           $("#eT" + snippet.id() + "jHueTableExtenderClonedContainerCell").remove();
+##           _el.dataTable().fnClearTable();
+##           _el.dataTable().fnDestroy();
+##           _el.find("thead tr").empty();
+##         }
       });
 
       $(document).on('click', '.dataTables_wrapper > table tbody tr', function () {
@@ -3173,31 +3237,39 @@ ${ hueIcons.symbols() }
 
       $(document).on("renderData", function (e, options) {
         var _el = $("#snippet_" + options.snippet.id()).find(".resultTable");
+        var $hotEl = $("#snippet_" + options.snippet.id()).find(".handsontable-result");
         if (options.data.length > 0) {
           window.setTimeout(function () {
             var _dt;
+            var _hot;
             if (options.initial) {
               options.snippet.result.meta.notifySubscribers();
               $("#snippet_" + options.snippet.id()).find("select").trigger("chosen:updated");
-              _dt = createDatatable(_el, options.snippet, viewModel);
+              //_dt = createDatatable(_el, options.snippet, viewModel);
+              _hot = createHandsonTable($hotEl, options.snippet, viewModel);
             } else if (options.snippet.result.hasManyColumns()) {
-              _dt = _el.hueDataTable();
+              //_dt = _el.hueDataTable();
+              _hot = $hotEl.data('handsontable');
             } else {
-              _dt = _el.dataTable();
+              //_dt = _el.dataTable();
+              _hot = $hotEl.data('handsontable');
             }
             try {
-              _dt.fnAddData(options.data);
+              //_dt.fnAddData(options.data);
+              _hot = $hotEl.data('handsontable');
+              var nD = _hot.getData().concat(options.data)
+  	          _hot.loadData(nD);
             }
             catch (e) {}
-            var _dtElement = $("#snippet_" + options.snippet.id()).find(".dataTables_wrapper");
-            _dtElement.animate({opacity: '1'}, 50);
-            _dtElement.scrollTop(_dtElement.data("scrollPosition"));
-            redrawFixedHeaders();
-            resizeToggleResultSettings(options.snippet);
+##             var _dtElement = $("#snippet_" + options.snippet.id()).find(".dataTables_wrapper");
+##             _dtElement.animate({opacity: '1'}, 50);
+##             _dtElement.scrollTop(_dtElement.data("scrollPosition"));
+##             redrawFixedHeaders();
+##             resizeToggleResultSettings(options.snippet);
           }, 300);
         } else {
-          var _dtElement = $("#snippet_" + options.snippet.id()).find(".dataTables_wrapper");
-          _dtElement.animate({opacity: '1'}, 50);
+##           var _dtElement = $("#snippet_" + options.snippet.id()).find(".dataTables_wrapper");
+##           _dtElement.animate({opacity: '1'}, 50);
         }
         $("#snippet_" + options.snippet.id()).find("select").trigger('chosen:updated');
       });
@@ -3268,6 +3340,10 @@ ${ hueIcons.symbols() }
       });
 
       function forceChartDraws() {
+
+      }
+
+      function forceChartDrawz() {
         if (viewModel.selectedNotebook()) {
           viewModel.selectedNotebook().snippets().forEach(function (snippet) {
             if (snippet.result.data().length > 0) {
