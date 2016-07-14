@@ -52,7 +52,7 @@ def escape_rows(rows, nulls_only=False):
 
 
 def make_notebook(name='Browse', description='', editor_type='hive', statement='', status='ready',
-                  files=None, functions=None, settings=None, is_saved=False, database='default'):
+                  files=None, functions=None, settings=None, is_saved=False, database='default', batch_submit=False):
 
   from notebook.connectors.hiveserver2 import HS2Api
 
@@ -94,6 +94,7 @@ def make_notebook(name='Browse', description='', editor_type='hive', statement='
          'statement_raw': statement,
          'statement': statement,
          'type': editor_type,
+         'wasBatchExecuted': batch_submit,
          'properties': {
             'files': [] if files is None else files,
             'functions': [] if functions is None else functions,
