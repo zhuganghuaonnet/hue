@@ -39,7 +39,7 @@ LOG = logging.getLogger(__name__)
 try:
   from beeswax import data_export
   from beeswax.api import _autocomplete, _get_sample_data
-  from beeswax.conf import CONFIG_WHITELIST as hive_settings
+  from beeswax.conf import CONFIG_WHITELIST as hive_settings, DOWNLOAD_CELL_LIMIT
   from beeswax.data_export import upload
   from beeswax.design import hql_query, strip_trailing_semicolon, split_statements
   from beeswax import conf as beeswax_conf
@@ -399,6 +399,7 @@ class HS2Api(Api):
     return {
       'rows': 1000,
       'size': 1024 * 1024 * 100, # Until HUE-4181
+      'too_much': DOWNLOAD_CELL_LIMIT.get() > 100
     }
 
   @query_error_handler
