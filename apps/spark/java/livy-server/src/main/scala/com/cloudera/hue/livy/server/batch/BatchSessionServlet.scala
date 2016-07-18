@@ -45,8 +45,10 @@ private object Serializers {
 
   def serializeBatch(batch: BatchSession): JValue = {
     ("id", batch.id) ~
-      ("state", batch.state.toString) ~
-      ("log", getLogs(batch, None, Some(10))._3)
+      ("yarnAppId", batch.yarnAppId) ~
+      ("argsString", batch.argsString) ~
+      ("state", batch.state.toString) //~
+      //("log", getLogs(batch, None, Some(10))._3)
   }
 
   def getLogs(batch: BatchSession, fromOpt: Option[Int], sizeOpt: Option[Int]) = {

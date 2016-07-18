@@ -37,27 +37,27 @@ object SparkProcessBuilder {
 class SparkProcessBuilder(livyConf: LivyConf, userConfigurableOptions: Set[String]) extends Logging {
   import SparkProcessBuilder._
 
-  private[this] val fsRoot = livyConf.filesystemRoot()
+  protected[this] val fsRoot = livyConf.filesystemRoot()
 
-  private[this] var _executable: Path = AbsolutePath(livyConf.sparkSubmit())
-  private[this] var _master: Option[String] = None
-  private[this] var _deployMode: Option[String] = None
-  private[this] var _className: Option[String] = None
-  private[this] var _name: Option[String] = Some("Livy")
-  private[this] var _jars: ArrayBuffer[Path] = ArrayBuffer()
-  private[this] var _pyFiles: ArrayBuffer[Path] = ArrayBuffer()
-  private[this] var _files: ArrayBuffer[Path] = ArrayBuffer()
-  private[this] val _conf = mutable.HashMap[String, String]()
-  private[this] var _driverClassPath: ArrayBuffer[String] = ArrayBuffer()
-  private[this] var _proxyUser: Option[String] = None
+  protected[this] var _executable: Path = AbsolutePath(livyConf.sparkSubmit())
+  protected[this] var _master: Option[String] = None
+  protected[this] var _deployMode: Option[String] = None
+  protected[this] var _className: Option[String] = None
+  protected[this] var _name: Option[String] = Some("Livy")
+  protected[this] var _jars: ArrayBuffer[Path] = ArrayBuffer()
+  protected[this] var _pyFiles: ArrayBuffer[Path] = ArrayBuffer()
+  protected[this] var _files: ArrayBuffer[Path] = ArrayBuffer()
+  protected[this] val _conf = mutable.HashMap[String, String]()
+  protected[this] var _driverClassPath: ArrayBuffer[String] = ArrayBuffer()
+  protected[this] var _proxyUser: Option[String] = None
 
-  private[this] var _queue: Option[String] = None
-  private[this] var _archives: ArrayBuffer[Path] = ArrayBuffer()
+  protected[this] var _queue: Option[String] = None
+  protected[this] var _archives: ArrayBuffer[Path] = ArrayBuffer()
 
-  private[this] var _env: ArrayBuffer[(String, String)] = ArrayBuffer()
-  private[this] var _redirectOutput: Option[ProcessBuilder.Redirect] = None
-  private[this] var _redirectError: Option[ProcessBuilder.Redirect] = None
-  private[this] var _redirectErrorStream: Option[Boolean] = None
+  protected[this] var _env: ArrayBuffer[(String, String)] = ArrayBuffer()
+  protected[this] var _redirectOutput: Option[ProcessBuilder.Redirect] = None
+  protected[this] var _redirectError: Option[ProcessBuilder.Redirect] = None
+  protected[this] var _redirectErrorStream: Option[Boolean] = None
 
   def executable(executable: Path): SparkProcessBuilder = {
     _executable = executable
@@ -251,6 +251,7 @@ class SparkProcessBuilder(livyConf: LivyConf, userConfigurableOptions: Set[Strin
     addList("--py-files", _pyFiles.map(fromPath))
     addList("--files", _files.map(fromPath))
     addOpt("--class", _className)
+
     _conf.foreach { case (key, value) =>
       arguments += "--conf"
       arguments += f"$key=$value"
@@ -284,13 +285,14 @@ class SparkProcessBuilder(livyConf: LivyConf, userConfigurableOptions: Set[Strin
     _redirectError.foreach(pb.redirectError)
     _redirectErrorStream.foreach(pb.redirectErrorStream)
 
-    SparkProcess(pb.start())
+    SparkProcess(pb.start(), Some(argsString))
   }
 
-  private def fromPath(path: Path) = path match {
+  protected def fromPath(path: Path) = path match {
     case AbsolutePath(p) => p
     case RelativePath(p) =>
-      if (p.startsWith("hdfs://")) {
+     /* if (p.startsWith("hdfs://")) {*/
+	 if (p.startsWith("webhdfs://")) {
         p
       } else {
         fsRoot + "/" + p

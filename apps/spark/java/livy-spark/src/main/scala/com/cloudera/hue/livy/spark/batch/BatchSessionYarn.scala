@@ -31,18 +31,20 @@ object BatchSessionYarn {
   implicit def executor: ExecutionContextExecutor = ExecutionContext.global
 
   def apply(client: Client, id: Int, process: SparkProcess): BatchSession = {
-    val job = Future {
+    val jobFuture = Future {
       client.getJobFromProcess(process)
     }
-    new BatchSessionYarn(id, process, job)
+    new BatchSessionYarn(id, process, jobFuture)
   }
 }
 
-private class BatchSessionYarn(val id: Int, process: LineBufferedProcess, jobFuture: Future[Job]) extends BatchSession {
+private class BatchSessionYarn(val id: Int, process: LineBufferedProcess, jobFuture: Future[NaoJob]) extends BatchSession {
 
   implicit def executor: ExecutionContextExecutor = ExecutionContext.global
 
   private var _state: SessionState = SessionState.Starting()
+
+  private var _yarnAppId: Option[String] = None
 
   private var _jobThread: Thread = _
 
@@ -52,6 +54,7 @@ private class BatchSessionYarn(val id: Int, process: LineBufferedProcess, jobFut
 
     case util.Success(job) =>
       _state = SessionState.Running()
+      _yarnAppId = Some(job.applicationId)
 
       _jobThread = new Thread {
         override def run(): Unit = {
@@ -77,6 +80,10 @@ private class BatchSessionYarn(val id: Int, process: LineBufferedProcess, jobFut
   }
 
   override def state: SessionState = _state
+  
+  override def yarnAppId: Option[String] = _yarnAppId
+
+  override def argsString: Option[String] = process.SubmitArgsString
 
   override def stop(): Future[Unit] = {
     jobFuture.map { job =>

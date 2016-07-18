@@ -28,6 +28,7 @@ import org.json4s.{DefaultFormats, Formats, JValue, MappingException}
 import org.scalatra._
 import org.scalatra.json.JacksonJsonSupport
 
+import java.util.concurrent.Executors
 import scala.concurrent.{ExecutionContext, Future}
 
 object SessionServlet extends Logging
@@ -111,6 +112,7 @@ abstract class SessionServlet[S <: Session](sessionManager: SessionManager[S])
 
   post("/") {
     new AsyncResult {
+      //implicit val ec = ExecutionContext.fromExecutorService(Executors.newSingleThreadExecutor)
       val is = Future {
         val session = sessionManager.create(parsedBody)
         Created(session,

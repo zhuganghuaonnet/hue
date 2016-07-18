@@ -50,9 +50,9 @@ class Client(livyConf: LivyConf) extends Logging {
   yarnClient.init(yarnConf)
   yarnClient.start()
 
-  def getJobFromProcess(process: LineBufferedProcess): Job = {
+  def getJobFromProcess(process: LineBufferedProcess): NaoJob = {
     parseApplicationId(process.inputIterator) match {
-      case Some(appId) => new Job(yarnClient, ConverterUtils.toApplicationId(appId))
+      case Some(appId) => new NaoJob(yarnClient, ConverterUtils.toApplicationId(appId))
       case None => throw new FailedToSubmitApplication
     }
   }

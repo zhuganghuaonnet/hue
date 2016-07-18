@@ -26,6 +26,7 @@ import com.cloudera.hue.livy.repl.scala.SparkInterpreter
 import com.cloudera.hue.livy.repl.sparkr.SparkRInterpreter
 import com.cloudera.hue.livy.sessions.SessionState
 import com.cloudera.hue.livy.{LivyConf, Logging, WebServer}
+import com.cloudera.hue.livy.NaoLivyConf
 import dispatch._
 import org.json4s.jackson.Serialization.write
 import org.json4s.{DefaultFormats, Formats}
@@ -63,7 +64,7 @@ object Main extends Logging {
         sys.exit(1)
     }
 
-    val server = new WebServer(new LivyConf(), host, port)
+    val server = new WebServer(new NaoLivyConf(), host, port)
 
     server.context.setResourceBase("src/main/com/cloudera/hue/livy/repl")
     server.context.addEventListener(new ScalatraListener)

@@ -37,9 +37,14 @@ object Main {
   val PROCESS_SESSION = "process"
   val YARN_SESSION = "yarn"
   lazy val logger = LoggerFactory.getLogger(this.getClass)
+    System.setProperty("scala.concurrent.context.minThreads", "128");
+    System.setProperty("scala.concurrent.context.numThreads", "256");
+    System.setProperty("scala.concurrent.context.maxThreads", "512");
 
   def main(args: Array[String]): Unit = {
-    val livyConf = new LivyConf()
+    
+
+    val livyConf = new NaoLivyConf()
     Utils.loadDefaultLivyProperties(livyConf)
 
     val host = livyConf.get("livy.server.host", "0.0.0.0")
@@ -132,7 +137,7 @@ object Main {
     pb.redirectErrorStream(true)
     pb.redirectInput(ProcessBuilder.Redirect.PIPE)
 
-    val process = new LineBufferedProcess(pb.start())
+    val process = new LineBufferedProcess(pb.start(), None)
     val exitCode = process.waitFor()
     val output = process.inputIterator.mkString("\n")
 
@@ -155,7 +160,7 @@ class ScalatraBootstrap
 
   override def init(context: ServletContext): Unit = {
     try {
-      val livyConf = new LivyConf()
+      val livyConf = new NaoLivyConf()
       sparkManager = SparkManager(livyConf)
 
       context.mount(new InteractiveSessionServlet(sparkManager.interactiveManager), "/sessions/*")

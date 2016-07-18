@@ -45,6 +45,7 @@ class SessionManager[S <: Session](livyConf: LivyConf, factory: SessionFactory[S
   garbageCollector.start()
 
   def create(createRequest: JValue): S = {
+    info("Started created session")
     val id = _idCounter.getAndIncrement
     val session: S = factory.create(id, createRequest)
 

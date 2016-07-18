@@ -96,6 +96,11 @@ class WebServer(livyConf: LivyConf, var host: String, var port: Int) extends Log
     }
     port = connector.getLocalPort
 
+    val naoLivyConfig = livyConf.asInstanceOf[NaoLivyConf]
+    val sparkclrHome = naoLivyConfig.sparkclrHome()
+    val sparkclrCmd = naoLivyConfig.sparkclrSubmit()
+    info(f"$sparkclrHome")
+    info(f"$sparkclrCmd")
     info("Starting server on %s" format port)
   }
 

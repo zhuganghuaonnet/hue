@@ -26,6 +26,6 @@ class SparkProcessBuilderFactory(val livyConf: LivyConf, userConfigurableOptions
   }
 
   def builder() = {
-    new SparkProcessBuilder(livyConf, userConfigurableOptions)
+    new NaoSparkProcessBuilder(livyConf, userConfigurableOptions)
   }
 }

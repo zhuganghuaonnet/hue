@@ -22,11 +22,14 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 import scala.collection.JavaConverters._
+import org.slf4j.LoggerFactory
 
 object LivyConf {
   val SESSION_FACTORY_KEY = "livy.server.session.factory"
   val SPARK_HOME_KEY = "livy.server.spark-home"
+  //val SPARKCLR_HOME_KEY = "livy.server.sparkclr-home"
   val SPARK_SUBMIT_KEY = "livy.server.spark-submit"
+  //val SPARKCLR_SUBMIT_KEY = "livy.server.sparkclr-submit"
   val IMPERSONATION_ENABLED_KEY = "livy.impersonation.enabled"
 
   sealed trait SessionKind
@@ -48,11 +51,14 @@ class LivyConf(loadDefaults: Boolean) {
    */
   def this() = this(true)
 
+  lazy val logger = LoggerFactory.getLogger(this.getClass)
+
   private val settings = new ConcurrentHashMap[String, String]
 
   if (loadDefaults) {
     for ((k, v) <- System.getProperties.asScala if k.startsWith("livy.")) {
       settings.put(k, v)
+      logger.info(f"$k, $v")
     }
   }
 
@@ -99,12 +105,23 @@ class LivyConf(loadDefaults: Boolean) {
   /** Return the location of the spark home directory */
   def sparkHome(): Option[String] = getOption(SPARK_HOME_KEY).orElse(sys.env.get("SPARK_HOME"))
 
+  /** Return the location of the sparkclr home directory */
+  //def sparkclrHome(): Option[String] = getOption(SPARKCLR_HOME_KEY).orElse(sys.env.get("SPARKCLR_HOME"))
+
   /** Return the path to the spark-submit executable. */
   def sparkSubmit(): String = {
     getOption(SPARK_SUBMIT_KEY)
-      .orElse { sparkHome().map { _ + File.separator + "bin" + File.separator + "spark-submit" } }
-      .getOrElse("spark-submit")
+      .orElse { sparkHome().map { _ + File.separator + "bin" + File.separator + "spark-submit.cmd" } }
+      .getOrElse("spark-submit.cmd")
   }
+
+  /** Return the path to the sparkclr-submit executable. */
+
+  /*def sparkclrSubmit(): String = {
+    getOption(SPARKCLR_SUBMIT_KEY)
+      .orElse { sparkclrHome().map { _ + File.separator + "scripts" + File.separator + "sparkclr-submit.cmd" } }
+      .getOrElse("sparkclr-submit.cmd")
+  }*/
 
   def sessionKind(): SessionKind = getOption(SESSION_FACTORY_KEY).getOrElse("process") match {
     case "process" => Process()
@@ -115,6 +132,8 @@ class LivyConf(loadDefaults: Boolean) {
   /** Return the filesystem root. Defaults to the local filesystem. */
   def filesystemRoot(): String = sessionKind() match {
     case Process() => "file://"
-    case Yarn() => "hdfs://"
+	case Yarn() => "webhdfs://"
+    /*case Yarn() => "hdfs://"*/
+    //Here should use hdfs than webhdfs, will change back after finish test
   }
 }

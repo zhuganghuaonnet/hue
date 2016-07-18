@@ -18,7 +18,7 @@
 
 package com.cloudera.hue.livy
 
-class LineBufferedProcess(process: Process) extends Logging {
+class LineBufferedProcess(process: Process, argsString: Option[String]) extends Logging {
 
   private[this] val _inputStream = new LineBufferedStream(process.getInputStream)
   private[this] val _errorStream = new LineBufferedStream(process.getErrorStream)
@@ -43,5 +43,7 @@ class LineBufferedProcess(process: Process) extends Logging {
   def waitFor(): Int = {
     process.waitFor()
   }
+
+  def SubmitArgsString: Option[String] = argsString
 }
 

@@ -16,11 +16,15 @@
  * limitations under the License.
  */
 
-package com.cloudera.hue.livy.sessions.batch
+package com.cloudera.hue.livy.yarn
 
-import com.cloudera.hue.livy.sessions.Session
+import org.apache.hadoop.yarn.api.records.{FinalApplicationStatus, YarnApplicationState, ApplicationId}
+import org.apache.hadoop.yarn.client.api.YarnClient
 
-trait BatchSession extends Session{
-    def yarnAppId: Option[String] = None
-    def argsString: Option[String] = None
+class NaoJob(yarnClient: YarnClient, appId: ApplicationId) extends Job(yarnClient, appId) {
+
+  def applicationId: String = appId.toString
+
+  override def stop(): Unit = {
+  }
 }
