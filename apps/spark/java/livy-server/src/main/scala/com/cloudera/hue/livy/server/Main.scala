@@ -22,9 +22,10 @@ import java.io.{File, IOException}
 import javax.servlet.ServletContext
 
 import com.cloudera.hue.livy._
+import com.cloudera.hue.livy.LivyConf.Yarn
 import com.cloudera.hue.livy.server.batch.BatchSessionServlet
 import com.cloudera.hue.livy.server.interactive.InteractiveSessionServlet
-import com.cloudera.hue.livy.spark.SparkManager
+import com.cloudera.hue.livy.spark.{SparkManager, SparkYarnManager}
 import org.scalatra._
 import org.scalatra.metrics.MetricsBootstrap
 import org.scalatra.metrics.MetricsSupportExtensions._
@@ -166,6 +167,10 @@ class ScalatraBootstrap
       context.mount(new InteractiveSessionServlet(sparkManager.interactiveManager), "/sessions/*")
       context.mount(new BatchSessionServlet(sparkManager.batchManager), "/batches/*")
       context.mountMetricsAdminServlet("/")
+
+      if (livyConf.sessionKind() == Yarn()) {
+        context.mount(new ApplicationReportServlet(livyConf), "/applicationReports/*")
+      }
 
       context.initParameters(org.scalatra.EnvironmentKey) = livyConf.get("livy.environment", "development")
     } catch {

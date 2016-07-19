@@ -18,7 +18,7 @@
 
 package com.cloudera.hue.livy.yarn
 
-import org.apache.hadoop.yarn.api.records.{FinalApplicationStatus, YarnApplicationState, ApplicationId}
+import org.apache.hadoop.yarn.api.records.{ApplicationReport, FinalApplicationStatus, YarnApplicationState, ApplicationId}
 import org.apache.hadoop.yarn.client.api.YarnClient
 
 class Job(yarnClient: YarnClient, appId: ApplicationId) {
@@ -83,6 +83,10 @@ class Job(yarnClient: YarnClient, appId: ApplicationId) {
   def getStatus: ApplicationState = {
     val statusResponse = yarnClient.getApplicationReport(appId)
     convertState(statusResponse.getYarnApplicationState, statusResponse.getFinalApplicationStatus)
+  }
+
+  def getApplicationReport: ApplicationReport = {
+    yarnClient.getApplicationReport(appId)
   }
 
   def stop(): Unit = {

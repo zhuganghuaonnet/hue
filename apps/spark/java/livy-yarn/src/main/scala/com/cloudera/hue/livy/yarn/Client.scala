@@ -57,6 +57,10 @@ class Client(livyConf: LivyConf) extends Logging {
     }
   }
 
+  def getJobFromApplicationId(appId: String): Job = {
+    new Job(yarnClient, ConverterUtils.toApplicationId(appId))
+  }
+
   def close() = {
     yarnClient.close()
   }
